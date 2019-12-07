@@ -38,7 +38,7 @@ exports.trim = (string, ws = "\\s") =>
  * @param item array or string to join.
  * @param s seperator string.
 */
-exports.strjoin = (item, s = " ") => {
+exports.arrjoin = (item, s = " ") => {
     if (Array.isArray(item)) {
         return item.join(s);
     }

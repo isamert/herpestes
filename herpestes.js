@@ -31,7 +31,7 @@ CRUD.prototype.all = function (config) {
               afterId = req.query.after_id,
               sortBy = _.or(req.query.sort_by, _.or(cfg.sortBy, "_id")),
               searchTerm = req.query.search_term,
-              populateQuery = _.strjoin(req.query.populate)
+              populateQuery = _.arrjoin(req.query.populate)
 
         const findObj = {};
 
@@ -133,7 +133,7 @@ CRUD.prototype.findById = function (config) {
 
     return async (req, res, next) => {
         let item = null;
-        let populator = _.strjoin(req.query.populate);
+        let populator = _.arrjoin(req.query.populate);
         populator = populator ? populator : "";
         if (cfg.findBySlug || _.isObjectId(req.params.id)) {
             item = await cfg.model
