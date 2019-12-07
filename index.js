@@ -1,4 +1,5 @@
 const mongoose = require("mongoose")
+const express = require("express")
 const _ = require("./utils")
 
 // TODO: define user roles and add configuration
@@ -7,7 +8,9 @@ const _ = require("./utils")
 //     putRules: {"admin": "", "normal": "-password -email"}
 //     => email and password putting are disabled for normal
 
+// TODO: add DELETE for all()
 // TODO: CRUD for subdocuments
+// TODO: subdocumentrules trough herpestes.crud({..., subdocRules: {"subDocPathName": {properties to override parent rules}}})
 // TODO: automatically create all endpoints using model name
 
 const defaultAnswer = (res, result) => {
@@ -17,13 +20,53 @@ const defaultAnswer = (res, result) => {
 function CRUD(config) {
     this.cfg = config
     this.cfg.model = _.isstr(config.model) ? mongoose.model(config.model) : config.model
-    this.cfg.itemName = `__${this.cfg.model.modelName.toLowerCase()}`;
 
     return this
 }
 
+CRUD.prototype.router = function () {
+    const disabledOps = _.arrcfg(this.cfg.disabledOperations);
+
+    const router = new express.Router();
+    !disabledOps.includes('all') || router.get('/', this.all())
+    !disabledOps.includes('post') || router.post('/', this.post())
+
+    router.use("/:id", this.findById())
+
+    if (this.cfg.routeSubdocuments) {
+        this.cfg.model.schema.eachPath((pathname, schematype) => {
+            if (schematype.$isMongooseArray
+                && schematype.caster
+                && schematype.caster.options.ref
+                && schematype.casterConstructor.schemaName === "ObjectId") {
+                const subroute = router.route(`/:id/${pathname}`)
+
+                const cfg = Object.assign({}, this.cfg)
+                cfg.model = schematype.caster.options.ref
+                cfg.attach = false
+                cfg.attach = router
+                exports.crud(cfg)
+            }
+            // TODO: arraySubdocument
+            // else if (schematype.$isArraySubdocument) {
+            // ...
+            // }
+        })
+    }
+
+    !disabledOps.includes('get') || router.get('/:id', this.get())
+    !disabledOps.includes('put') || router.put('/:id', this.put())
+    !disabledOps.includes('patch') || router.patch('/:id', this.patch())
+    !disabledOps.includes('delete') || router.delete('/:id', this.delete())
+
+    if (attach) {
+        attach.use(`/${this.cfg.model.modelName.toLowerCase()}`, router)
+    }
+
+    return router;
+}
+
 CRUD.prototype.all = function (config) {
-    // Override settings for GET
     const cfg = Object.assign(Object.assign({}, this.cfg), config)
 
     return async (req, res) => {
@@ -124,7 +167,7 @@ CRUD.prototype.get = function (config) {
     const cfg = Object.assign(Object.assign({}, this.cfg), config)
 
     return async (req, res) => {
-        cfg.answer(res, req[cfg.itemName]);
+        cfg.answer(res, req.$item$);
     }
 }
 
@@ -151,7 +194,7 @@ CRUD.prototype.findById = function (config) {
             return cfg.answer(res, cfg.notFoundResponse(req));
         }
 
-        req[cfg.itemName] = item;
+        req.$item$ = item;
         next();
     }
 }
@@ -196,12 +239,12 @@ CRUD.prototype.patch = function () {
 
 CRUD.prototype.delete = function () {
     return async (req, res) => {
-        await req[cfg.itemName].remove();
-        return req[cfg.itemName];
+        await req.$item$.remove();
+        return req.$item$;
     }
 }
 
-exports.crud = ({
+exports.crud = function ({
     model = null,
     answer = defaultAnswer,
     notFoundResponse = (req) => "not-found",
@@ -210,8 +253,11 @@ exports.crud = ({
     sortBy = null,
     searchFields,
     populate = "",
-} = {}) => {
-    const config = {
+    disabledOperations = "",
+    attach,
+    routeSubdocuments = true
+} = {}) {
+    return new CRUD({
         model,
         answer,
         notFoundResponse,
@@ -219,8 +265,9 @@ exports.crud = ({
         project,
         searchFields,
         sortBy,
-        populate
-    }
-
-    return new CRUD(config)
+        populate,
+        disabledOperations,
+        attach,
+        routeSubdocuments
+    })
 };
