@@ -13,13 +13,18 @@ const _ = require("./utils")
 // TODO: subdocumentrules trough herpestes.crud({..., subdocRules: {"subDocPathName": {properties to override parent rules}}})
 // TODO: automatically create all endpoints using model name
 
+const mkModel = (model) => _.isstr(config.model) ? mongoose.model(config.model) : config.model
+const mkModelParam = (model) => `:id_${_.isstr(model) ? model : model.modelName}`
+const getModelParam = (req, model) => req[`id_${_.isstr(model) ? model : model.modelName}`]
+const setPathItem = (req, path, item) => req[`$item_${path.model.modelName}$`] = item
+
 const defaultAnswer = (res, result) => {
     return res.json(result)
 };
 
 function CRUD(config) {
     this.cfg = config
-    this.cfg.model = _.isstr(config.model) ? mongoose.model(config.model) : config.model
+    this.cfg.model = mkModel(config.model)
 
     return this
 }
@@ -28,10 +33,10 @@ CRUD.prototype.router = function () {
     const disabledOps = _.arrcfg(this.cfg.disabledOperations);
 
     const router = new express.Router();
-    !disabledOps.includes('all') || router.get('/', this.all())
-    !disabledOps.includes('post') || router.post('/', this.post())
+    disabledOps.includes('all') || router.get('/', this.all())
+    disabledOps.includes('post') || router.post('/', this.post())
 
-    router.use("/:id", this.findById())
+    router.use(`/${mkModelParam(cfg.model)}`, this.findById())
 
     if (this.cfg.routeSubdocuments) {
         this.cfg.model.schema.eachPath((pathname, schematype) => {
@@ -39,13 +44,20 @@ CRUD.prototype.router = function () {
                 && schematype.caster
                 && schematype.caster.options.ref
                 && schematype.casterConstructor.schemaName === "ObjectId") {
-                const subroute = router.route(`/:id/${pathname}`)
 
                 const cfg = Object.assign({}, this.cfg)
-                cfg.model = schematype.caster.options.ref
+                cfg.$path$.push({
+                    path: pathname,
+                    parentModel: cfg.model,
+                    model: mkModel(schematype.caster.options.ref)
+                })
+
+                cfg.model = mkModel(schematype.caster.options.ref)
                 cfg.attach = false
-                cfg.attach = router
-                exports.crud(cfg)
+
+                const subrouter = exports.crud(cfg).router()
+                router.use(`/:${mkModelParam(pathname)}/${pathname}`, subrouter)
+                model.find
             }
             // TODO: arraySubdocument
             // else if (schematype.$isArraySubdocument) {
@@ -54,13 +66,14 @@ CRUD.prototype.router = function () {
         })
     }
 
-    !disabledOps.includes('get') || router.get('/:id', this.get())
-    !disabledOps.includes('put') || router.put('/:id', this.put())
-    !disabledOps.includes('patch') || router.patch('/:id', this.patch())
-    !disabledOps.includes('delete') || router.delete('/:id', this.delete())
+    disabledOps.includes('get') || router.get('/:id', this.get())
+    disabledOps.includes('put') || router.put('/:id', this.put())
+    disabledOps.includes('patch') || router.patch('/:id', this.patch())
+    disabledOps.includes('delete') || router.delete('/:id', this.delete())
 
-    if (attach) {
-        attach.use(`/${this.cfg.model.modelName.toLowerCase()}`, router)
+    if (this.cfg.attach) {
+        const endName = _.plural(this.cfg.model.modelName.toLowerCase());
+        this.cfg.attach.use(`/${endName}`, router)
     }
 
     return router;
@@ -147,6 +160,11 @@ CRUD.prototype.all = function (config) {
                                + `${_.or(populateQuery, "")}`)
               .trim();
 
+        if (cfg.subdocPath) {
+            req.params.subdoc
+            findObj._id = { $in: ["list of ids"] }
+        }
+
         let query = cfg.model
             .find(findObj)
             .limit(limit)
@@ -174,28 +192,33 @@ CRUD.prototype.get = function (config) {
 CRUD.prototype.findById = function (config) {
     const cfg = Object.assign(Object.assign({}, this.cfg), config)
 
+    // FIXME: populator populates everything in the path. intended or not?
     return async (req, res, next) => {
-        let item = null;
-        let populator = _.arrjoin(req.query.populate);
-        populator = populator ? populator : "";
-        if (cfg.findBySlug || _.isObjectId(req.params.id)) {
-            item = await cfg.model
-                .findById(req.params.id)
-                .populate(_.escapeRegExp(populator))
-                .select(cfg.project);
-        } else if (cfg.findBySlug)  {
-            item = await cfg.model
-                .findOne({ [cfg.findBySlug]: req.params.id })
-                .populate(_.escapeRegExp(populator))
-                .select(cfg.project);
-        }
+        cfg.$path$.forEach(path => {
+            let item = null
+            let populator = _.arrjoin(req.query.populate)
+            populator = populator ? populator : ""
+            const idParam = getModelParam(req, path.model)
+            if (_.isObjectId(idParam)) {
+                item = await cfg.model
+                    .findById(idParam)
+                    .populate(_.escapeRegExp(populator))
+                    .select(cfg.project)
+            } else if (cfg.findBySlug)  {
+                item = await cfg.model
+                    .findOne({ [cfg.findBySlug]: idParam })
+                    .populate(_.escapeRegExp(populator))
+                    .select(cfg.project)
+            }
 
-        if (!item) {
-            return cfg.answer(res, cfg.notFoundResponse(req));
-        }
+            if (!item) {
+                return cfg.answer(res, cfg.notFoundResponse(req));
+            }
 
-        req.$item$ = item;
-        next();
+            setPathItem(req, path, item)
+        })
+
+        next()
     }
 }
 
@@ -268,6 +291,7 @@ exports.crud = function ({
         populate,
         disabledOperations,
         attach,
-        routeSubdocuments
+        routeSubdocuments,
+        $path$: []
     })
 };
