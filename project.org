@@ -1,150 +1,130 @@
-* Parents
-** GET
-#+BEGIN_SRC http :pretty
-GET localhost:8000/tests
+* Prep
+#+NAME: PORT
+#+BEGIN_SRC text
+8001
 #+END_SRC
-
-#+RESULTS:
-#+begin_example
-[
-  {
-    "_id": "5dec314d728a17bb5ca56262",
-    "c": [],
-    "a": "1",
-    "b": "2",
-    "createdAt": "2019-12-07T23:10:05.566Z",
-    "updatedAt": "2019-12-07T23:10:05.566Z"
-  },
-  {
-    "_id": "5dec314d728a17bb5ca56263",
-    "c": [],
-    "a": "2",
-    "b": "3",
-    "createdAt": "2019-12-07T23:10:05.567Z",
-    "updatedAt": "2019-12-07T23:10:05.567Z"
-  },
-  {
-    "_id": "5dec314d728a17bb5ca56264",
-    "c": [],
-    "a": "3",
-    "b": "4",
-    "createdAt": "2019-12-07T23:10:05.567Z",
-    "updatedAt": "2019-12-07T23:10:05.567Z"
-  },
-  {
-    "_id": "5dec314d728a17bb5ca56265",
-    "c": [],
-    "a": "5",
-    "b": "5",
-    "createdAt": "2019-12-07T23:10:05.567Z",
-    "updatedAt": "2019-12-07T23:10:05.567Z"
-  },
-  {
-    "_id": "5dec3263a62af2cf0beda5ee",
-    "c": [
-      "5dec3263a62af2cf0beda5ec",
-      "5dec3263a62af2cf0beda5ed"
-    ],
-    "a": "1",
-    "b": "2",
-    "createdAt": "2019-12-07T23:14:43.459Z",
-    "updatedAt": "2019-12-07T23:14:43.459Z"
-  },
-  {
-    "_id": "5dec3263a62af2cf0beda5ef",
-    "c": [
-      "5dec3263a62af2cf0beda5ec"
-    ],
-    "a": "2",
-    "b": "3",
-    "createdAt": "2019-12-07T23:14:43.459Z",
-    "updatedAt": "2019-12-07T23:14:43.459Z"
-  },
-  {
-    "_id": "5dec3263a62af2cf0beda5f0",
-    "c": [],
-    "a": "3",
-    "b": "4",
-    "createdAt": "2019-12-07T23:14:43.459Z",
-    "updatedAt": "2019-12-07T23:14:43.459Z"
-  },
-  {
-    "_id": "5dec3263a62af2cf0beda5f1",
-    "c": [],
-    "a": "5",
-    "b": "5",
-    "createdAt": "2019-12-07T23:14:43.459Z",
-    "updatedAt": "2019-12-07T23:14:43.459Z"
-  }
-]
-#+end_example
+* Parents
 ** POST
 #+NAME: parent
-#+BEGIN_SRC http :pretty :select ._id
-POST localhost:8000/tests
+#+BEGIN_SRC http :noweb yes :pretty :select ._id
+POST localhost:<<PORT>>/tests
 Content-Type: application/json
 
-{"a": "1", "b": "2", "c": []}
+{
+  "a": "13322jk",
+  "b": "25555",
+  "c": []
+}
 #+END_SRC
 
 #+RESULTS: parent
-: 5decf3f417476559f3a98eb8
+: 5deed91c4e131646511e74b3
 
-* Subdocuments with refs
-** TODO GET
-- GET current documents child
-#+BEGIN_SRC http :pretty :noweb yes
-GET localhost:8000/tests/<<parent()>>/c
+** GET all
+#+BEGIN_SRC http :noweb yes :pretty
+GET localhost:<<PORT>>/tests
 #+END_SRC
-
-$path$ = [{pathname: c, parentModel: testModel, model, }]
-x = $path$.last()
-x.parentModel.findById(getModelParam(req, x.parentModel))
-
-=/a/:id_a/b/:id_b/c/:id_c=
-req.$item_a$ = a
-req.$item_b$ = b
-req.$item_c$ = c
 
 #+RESULTS:
 #+begin_example
 [
   {
-    "_id": "5dec3263a62af2cf0beda5ec",
-    "d": "6",
-    "e": 7
+    "_id": "5dee8b36cb0288b59e0c280e",
+    "c": [
+      "5dee8b36cb0288b59e0c280c",
+      "5dee8b36cb0288b59e0c280d"
+    ],
+    "a": "1",
+    "b": "2",
+    "createdAt": "2019-12-09T17:58:14.579Z",
+    "updatedAt": "2019-12-09T17:58:14.579Z"
   },
   {
-    "_id": "5dec3263a62af2cf0beda5ed",
-    "d": "1",
-    "e": 2
+    "_id": "5dee8b36cb0288b59e0c280f",
+    "c": [
+      "5dee8b36cb0288b59e0c280c"
+    ],
+    "a": "2",
+    "b": "3",
+    "createdAt": "2019-12-09T17:58:14.580Z",
+    "updatedAt": "2019-12-09T17:58:14.580Z"
   },
   {
-    "_id": "5decf10317476559f3a98eb4"
+    "_id": "5dee8b36cb0288b59e0c2810",
+    "c": [],
+    "a": "3",
+    "b": "4",
+    "createdAt": "2019-12-09T17:58:14.580Z",
+    "updatedAt": "2019-12-09T17:58:14.580Z"
   },
   {
-    "_id": "5decf10f17476559f3a98eb5",
-    "d": "3333",
-    "e": 2222
+    "_id": "5dee8b36cb0288b59e0c2811",
+    "c": [],
+    "a": "5",
+    "b": "5",
+    "createdAt": "2019-12-09T17:58:14.580Z",
+    "updatedAt": "2019-12-09T17:58:14.580Z"
   }
 ]
 #+end_example
+** GET one
+#+BEGIN_SRC http :noweb yes :pretty
+GET localhost:<<PORT>>/tests/5dee8b36cb0288b59e0c280e
+#+END_SRC
 
+#+RESULTS:
+#+begin_example
+{
+  "c": [
+    "5dee8b36cb0288b59e0c280c",
+    "5dee8b36cb0288b59e0c280d"
+  ],
+  "_id": "5dee8b36cb0288b59e0c280e",
+  "a": "1",
+  "b": "2",
+  "createdAt": "2019-12-09T17:58:14.579Z",
+  "updatedAt": "2019-12-09T17:58:14.579Z"
+}
+#+end_example
+
+* Subdocuments with refs
 ** TODO POST
 - POST to current documents child, not only the model
 #+BEGIN_SRC http :noweb yes :pretty
-POST localhost:8000/tests/<<parent()>>/c
+POST localhost:<<PORT>>/tests/<<parent()>>/c
 Content-Type: application/json
 
 {"d": "22", "e": 777}
 #+END_SRC
 
 #+RESULTS:
+#+begin_example
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot POST /tests/5dee8acf29dc4ab4ffa9678e</pre>
+</body>
+</html>
+#+end_example
+** TODO GET
+- GET current documents child
+#+BEGIN_SRC http :pretty :noweb yes
+GET localhost:<<PORT>>/tests/<<parent()>>/c/
+#+END_SRC
+
+#+RESULTS:
 : {
-:   "_id": "5decfca611dad4253e06c814",
-:   "d": "22",
-:   "e": 777,
-:   "__v": 0
+:   "c": [],
+:   "_id": "5deed8f84e131646511e74b2",
+:   "a": "13322jk",
+:   "b": "25555",
+:   "createdAt": "2019-12-09T23:30:00.313Z",
+:   "updatedAt": "2019-12-09T23:30:00.313Z"
 : }
+
 * TODO POST with subdocument
 - Subdoc gets created and added into parent as expected.

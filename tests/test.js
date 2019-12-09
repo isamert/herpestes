@@ -44,7 +44,7 @@ const testCrud = herpestes.crud({
 
 // Run server
 server.get("*", (req, res) => res.send("retard"))
-server.listen(8000, (err) => {
+server.listen(8001, (err) => {
     if (err) { throw err }
-    console.log(`> Ready on localhost:8000`)
+    console.log(`> Ready on localhost:8001`)
 })
