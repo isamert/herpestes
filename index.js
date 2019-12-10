@@ -16,8 +16,6 @@ const _ = require("./utils")
 const mkModel = (model) => _.isstr(model) ? mongoose.model(model) : model
 const mkModelParam = (model) => `id_${_.isstr(model) ? model : model.modelName}`
 const getModelParam = (req, model) => req.params[mkModelParam(model)]
-const isSubdocPath = (path) => path.length > 0
-const getCurrentPath = (path) => path[path.length - 1]
 
 const defaultAnswer = (res, result) => {
     return res.json(result)
@@ -51,19 +49,14 @@ CRUD.prototype.router = function () {
                 cfg.model = mkModel(schematype.caster.options.ref)
                 cfg.attach = false
 
-                // FIXME: deep copy?
-                cfg.$path$ = [...cfg.$path$]
-                cfg.$path$.push({
-                    path: pathname, // FIXME: only need this now, simplify
-                    parentModel,
-                    model: cfg.model
-                })
-
                 router.param(mkModelParam(parentModel), async (req, res, next, parentId) => {
+                    req.$path$ = pathname
+                    req.$isSubdoc$ = true
                     req.$parent$ = await parentModel.findById(parentId)
-                    console.log(req.$parent$);
+
                     next()
                 })
+
                 const subrouter = (new CRUD(cfg)).router()
                 router.use(`/:${mkModelParam(parentModel)}/${pathname}`, subrouter)
             }
@@ -170,9 +163,8 @@ CRUD.prototype.all = function (config) {
                                + `${_.or(populateQuery, "")}`)
               .trim();
 
-        if (isSubdocPath(cfg.$path$)) {
-            const currPath = getCurrentPath(cfg.$path$)
-            findObj._id = { $in: req.$parent$[currPath.path] }
+        if (req.$isSubdoc$) {
+            findObj._id = { $in: req.$parent$[req.$path$] }
         }
 
         let query = cfg.model
@@ -191,7 +183,6 @@ CRUD.prototype.all = function (config) {
 }
 
 CRUD.prototype.get = function (config) {
-    // Override settings for GET
     const cfg = Object.assign(Object.assign({}, this.cfg), config)
 
     return async (req, res) => {
@@ -202,9 +193,9 @@ CRUD.prototype.get = function (config) {
 CRUD.prototype.findById = function (config) {
     const cfg = Object.assign(Object.assign({}, this.cfg), config)
 
+    // FIXME: This may be called twice if there is a child route in the way: req.param(...) ^^
     // FIXME: populator populates everything in the path. intended or not?
     return async (req, res, next) => {
-        console.log({a: "herE", paprams: req.params});
         let item = null
         let populator = _.arrjoin(req.query.populate)
         populator = populator ? populator : ""
@@ -232,10 +223,6 @@ CRUD.prototype.findById = function (config) {
 }
 
 CRUD.prototype.post = function (config) {
-    // FIXME: this does not check subdocuments, also check other
-    // exports.route.... functions:
-    // Create the object using only the paths that are available in the schema
-    // and discard rest of the request body
     const cfg = Object.assign(Object.assign({}, this.cfg), config)
 
     const mkItem = (body) => {
@@ -250,11 +237,17 @@ CRUD.prototype.post = function (config) {
     }
 
     return async (req, res) => {
+
         let result;
         if (Array.isArray(req.body)) {
             result = await cfg.model.create(req.body.map(x => mkItem(x)))
+            // TODO: isSubdoc
         } else {
             result = await cfg.model.create(mkItem(req.body))
+            if (req.$isSubdoc$) {
+                req.$parent$[req.$path$].push(result._id)
+                await req.$parent$.save()
+            }
         }
 
         return cfg.answer(res, result)
@@ -269,10 +262,22 @@ CRUD.prototype.patch = function () {
     return () => { throw new Error("not-implemented") }
 }
 
-CRUD.prototype.delete = function () {
+CRUD.prototype.delete = function (config) {
+    const cfg = Object.assign(Object.assign({}, this.cfg), config)
+
     return async (req, res) => {
+        if (req.$isSubdoc$) {
+            const idParam = getModelParam(req, cfg.model)
+            req.$parent$[req.$path$].pull(idParam)
+
+            await req.$parent$.save()
+            await cfg.model.remove({ _id: idParam })
+
+            return cfg.answer(res, { _id: idParam });
+        }
+
         await req.$item$.remove();
-        return req.$item$;
+        return cfg.answer(req, req.$item$);
     }
 }
 
