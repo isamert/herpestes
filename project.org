@@ -1,13 +1,10 @@
-* Prep
-#+NAME: PORT
-#+BEGIN_SRC text
-8001
-#+END_SRC
+#+PROPERTY: header-args :var parent="5df015d54e131646511e74b6" :var child="5df0177be69a585f09194732" :var port="8001"
+
 * Parents
 ** POST
 #+NAME: parent
-#+BEGIN_SRC http :noweb yes :pretty :select ._id
-POST localhost:<<PORT>>/tests
+#+BEGIN_SRC http :pretty
+POST localhost:${port}/tests
 Content-Type: application/json
 
 {
@@ -17,114 +14,31 @@ Content-Type: application/json
 }
 #+END_SRC
 
-#+RESULTS: parent
-: 5deed91c4e131646511e74b3
-
 ** GET all
-#+BEGIN_SRC http :noweb yes :pretty
-GET localhost:<<PORT>>/tests
+#+BEGIN_SRC http :pretty
+GET localhost:${port}/tests
 #+END_SRC
 
-#+RESULTS:
-#+begin_example
-[
-  {
-    "_id": "5dee8b36cb0288b59e0c280e",
-    "c": [
-      "5dee8b36cb0288b59e0c280c",
-      "5dee8b36cb0288b59e0c280d"
-    ],
-    "a": "1",
-    "b": "2",
-    "createdAt": "2019-12-09T17:58:14.579Z",
-    "updatedAt": "2019-12-09T17:58:14.579Z"
-  },
-  {
-    "_id": "5dee8b36cb0288b59e0c280f",
-    "c": [
-      "5dee8b36cb0288b59e0c280c"
-    ],
-    "a": "2",
-    "b": "3",
-    "createdAt": "2019-12-09T17:58:14.580Z",
-    "updatedAt": "2019-12-09T17:58:14.580Z"
-  },
-  {
-    "_id": "5dee8b36cb0288b59e0c2810",
-    "c": [],
-    "a": "3",
-    "b": "4",
-    "createdAt": "2019-12-09T17:58:14.580Z",
-    "updatedAt": "2019-12-09T17:58:14.580Z"
-  },
-  {
-    "_id": "5dee8b36cb0288b59e0c2811",
-    "c": [],
-    "a": "5",
-    "b": "5",
-    "createdAt": "2019-12-09T17:58:14.580Z",
-    "updatedAt": "2019-12-09T17:58:14.580Z"
-  }
-]
-#+end_example
-** GET one
-#+BEGIN_SRC http :noweb yes :pretty
-GET localhost:<<PORT>>/tests/5dee8b36cb0288b59e0c280e
+** GET one parent
+#+BEGIN_SRC http :pretty
+GET localhost:${port}/tests/${parent}
 #+END_SRC
-
-#+RESULTS:
-#+begin_example
-{
-  "c": [
-    "5dee8b36cb0288b59e0c280c",
-    "5dee8b36cb0288b59e0c280d"
-  ],
-  "_id": "5dee8b36cb0288b59e0c280e",
-  "a": "1",
-  "b": "2",
-  "createdAt": "2019-12-09T17:58:14.579Z",
-  "updatedAt": "2019-12-09T17:58:14.579Z"
-}
-#+end_example
 
 * Subdocuments with refs
-** TODO POST
-- POST to current documents child, not only the model
-#+BEGIN_SRC http :noweb yes :pretty
-POST localhost:<<PORT>>/tests/<<parent()>>/c
+** POST
+#+BEGIN_SRC http :pretty
+POST localhost:${port}/tests/${parent}/c
 Content-Type: application/json
 
 {"d": "22", "e": 777}
 #+END_SRC
 
-#+RESULTS:
-#+begin_example
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Error</title>
-</head>
-<body>
-<pre>Cannot POST /tests/5dee8acf29dc4ab4ffa9678e</pre>
-</body>
-</html>
-#+end_example
-** TODO GET
-- GET current documents child
-#+BEGIN_SRC http :pretty :noweb yes
-GET localhost:<<PORT>>/tests/<<parent()>>/c/
+** GET
+#+BEGIN_SRC http :pretty
+GET localhost:${port}/tests/${parent}/c/${child}
 #+END_SRC
 
-#+RESULTS:
-: {
-:   "c": [],
-:   "_id": "5deed8f84e131646511e74b2",
-:   "a": "13322jk",
-:   "b": "25555",
-:   "createdAt": "2019-12-09T23:30:00.313Z",
-:   "updatedAt": "2019-12-09T23:30:00.313Z"
-: }
-
-* TODO POST with subdocument
-- Subdoc gets created and added into parent as expected.
+** DELETE
+#+BEGIN_SRC http :pretty
+DELETE localhost:${port}/tests/${parent}/c/${child}
+#+END_SRC
